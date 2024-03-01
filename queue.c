@@ -41,31 +41,86 @@ void q_free(struct list_head *head)
 /* Insert an element at head of queue */
 bool q_insert_head(struct list_head *head, char *s)
 {
+    element_t *element = (element_t *) malloc(sizeof(element_t));
+
+    if (!element || !head)
+        return false;
+
+    element->value = strdup(s);
+    if (!element->value) {
+        free(element);
+        return false;
+    }
+
+    list_add(&element->list, head);
     return true;
 }
 
 /* Insert an element at tail of queue */
 bool q_insert_tail(struct list_head *head, char *s)
 {
+    element_t *element = (element_t *) malloc(sizeof(element_t));
+
+    if (!element || !head)
+        return false;
+
+    element->value = strdup(s);
+    if (!element->value) {
+        free(element);
+        return false;
+    }
+
+    list_add_tail(&element->list, head);
     return true;
 }
 
 /* Remove an element from head of queue */
 element_t *q_remove_head(struct list_head *head, char *sp, size_t bufsize)
 {
-    return NULL;
+    if (!head || list_empty(head))
+        return NULL;
+
+    element_t *element = list_first_entry(head, element_t, list);
+    list_del(&element->list);
+
+    if (sp && bufsize > 0) {
+        strncpy(sp, element->value, bufsize - 1);
+        sp[bufsize - 1] = '\0';
+    }
+
+    return element;
 }
 
 /* Remove an element from tail of queue */
 element_t *q_remove_tail(struct list_head *head, char *sp, size_t bufsize)
 {
-    return NULL;
+    if (!head || list_empty(head))
+        return NULL;
+
+    element_t *element = list_last_entry(head, element_t, list);
+    list_del(&element->list);
+
+    if (sp && bufsize > 0) {
+        strncpy(sp, element->value, bufsize - 1);
+        sp[bufsize - 1] = '\0';
+    }
+
+    return element;
 }
 
 /* Return number of elements in queue */
 int q_size(struct list_head *head)
 {
-    return -1;
+    if (!head || list_empty(head))
+        return 0;
+
+    int size = 0;
+    struct list_head *iterator;
+    list_for_each (iterator, head) {
+        ++size;
+    }
+
+    return size;
 }
 
 /* Delete the middle node in queue */
