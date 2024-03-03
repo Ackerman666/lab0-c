@@ -160,6 +160,7 @@ bool q_delete_dup(struct list_head *head)
         return false;
 
     struct list_head *node, *safe;
+    bool delete = false;
 
     list_for_each_safe (node, safe, head) {
         element_t *cur = list_entry(node, element_t, list);
@@ -167,11 +168,13 @@ bool q_delete_dup(struct list_head *head)
 
 
         if (safe != head && strcmp(cur->value, next->value) == 0) {
-            safe = safe->next;
             list_del(node);
-            list_del(node->next);
             q_release_element(cur);
-            q_release_element(next);
+            delete = true;
+        } else if (delete) {
+            list_del(node);
+            q_release_element(cur);
+            delete = false;
         }
     }
     return true;
@@ -224,80 +227,31 @@ void q_reverse(struct list_head *head)
 void q_reverseK(struct list_head *head, int k)
 {
     // https://leetcode.com/problems/reverse-nodes-in-k-group/
-}
+    if (!head || list_empty(head) || k == 1)
+        return;
 
+    int times = 1;
 
-// Todo
-struct list_head *merge_two_list(struct list_head *left,
-                                 struct list_head *right)
-{
-    struct list_head head;
-    struct list_head *h = &head;
-    if (!left && !right) {
-        return NULL;
-    }
-    while (left && right) {
-        if (strcmp(list_entry(left, element_t, list)->value,
-                   list_entry(right, element_t, list)->value) < 0) {
-            h->next = left;
-            left = left->next;
-            h = h->next;
-        } else {
-            h->next = right;
-            right = right->next;
-            h = h->next;
+    struct list_head *node, *safe;
+    struct list_head tmp, rk_head;
+    INIT_LIST_HEAD(&tmp);
+    INIT_LIST_HEAD(&rk_head);
+
+    list_for_each_safe (node, safe, head) {
+        if (times == k) {
+            list_cut_position(&tmp, head, node);
+            q_reverse(&tmp);
+            list_splice_tail_init(&tmp, &rk_head);
+            times = 0;
         }
+        ++times;
     }
-    // after merge, there are still one node still not connect yet
-
-    if (left) {
-        h->next = left;
-    } else if (right) {
-        h->next = right;
-    }
-    return head.next;
+    list_splice(&rk_head, head);
 }
 
-// todo
-struct list_head *merge_recur(struct list_head *head)
-{
-    if (!head->next)
-        return head;
-
-    struct list_head *slow = head;
-    // split list
-    for (struct list_head *fast = head->next; fast && fast->next;
-         fast = fast->next->next) {
-        slow = slow->next;
-    }
-
-    struct list_head *mid = slow->next;  // the start node of right part
-    slow->next = NULL;
-
-    struct list_head *left = merge_recur(head);
-    struct list_head *right = merge_recur(mid);
-
-    return merge_two_list(left, right);
-}
 
 /* Sort elements of queue in ascending/descending order */
-void q_sort(struct list_head *head, bool descend)
-{
-    if (!head || list_empty(head))
-        return;
-    // disconnect the circular structure
-    head->prev->next = NULL;
-    head->next = merge_recur(head->next);
-    // reconnect the list (prev and circular)
-    struct list_head *c = head, *n = head->next;
-    while (n) {
-        n->prev = c;
-        c = n;
-        n = n->next;
-    }
-    c->next = head;
-    head->prev = c;
-}
+void q_sort(struct list_head *head, bool descend) {}
 
 /* Remove every node which has a node with a strictly less value anywhere to
  * the right side of it */
@@ -312,7 +266,30 @@ int q_ascend(struct list_head *head)
 int q_descend(struct list_head *head)
 {
     // https://leetcode.com/problems/remove-nodes-from-linked-list/
-    return 0;
+    if (!head || list_empty(head))
+        return 0;
+
+    int amount = 1;
+
+    struct list_head *max = head->prev, *node = head->prev->prev, *next;
+
+
+    for (next = node->prev; node != (head); node = next, next = node->prev) {
+        element_t *element = list_entry(node, element_t, list);
+        element_t *cur_max_element = list_entry(max, element_t, list);
+
+        if (strcmp(cur_max_element->value, element->value) > 0) {
+            list_del(&element->list);
+
+            /* 看函式說明為 "remove" node
+             * 但實際上要 "delete" node 才有辦法通過 trace-06-ops 的測資*/
+            q_release_element(element);
+        } else {
+            max = node;
+            ++amount;
+        }
+    }
+    return amount;
 }
 
 /* Merge all the queues into one sorted queue, which is in ascending/descending
