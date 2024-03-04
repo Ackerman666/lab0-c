@@ -123,14 +123,8 @@ int q_size(struct list_head *head)
     return size;
 }
 
-/* Delete the middle node in queue */
-bool q_delete_mid(struct list_head *head)
+struct list_head *find_mid_node(struct list_head *head)
 {
-    // https://leetcode.com/problems/delete-the-middle-node-of-a-linked-list/
-
-    if (!head || list_empty(head))
-        return false;
-
     struct list_head *fast, *slow, *tail;
 
     fast = slow = head->next;
@@ -144,9 +138,24 @@ bool q_delete_mid(struct list_head *head)
                 slow = slow->next;
         }
     }
+    return slow;
+}
 
-    list_del(slow);
-    element_t *mid_element = list_entry(slow, element_t, list);
+
+/* Delete the middle node in queue */
+bool q_delete_mid(struct list_head *head)
+{
+    // https://leetcode.com/problems/delete-the-middle-node-of-a-linked-list/
+
+    if (!head || list_empty(head))
+        return false;
+
+    struct list_head *mid;
+
+    mid = find_mid_node(head);
+
+    list_del(mid);
+    element_t *mid_element = list_entry(mid, element_t, list);
     q_release_element(mid_element);
     return true;
 }
@@ -249,16 +258,83 @@ void q_reverseK(struct list_head *head, int k)
     list_splice(&rk_head, head);
 }
 
+/* Merge tow queues and set final queue head to l*/
+void merge_two_queues(struct list_head *l, struct list_head *r, bool descend)
+{
+    struct list_head head;
+    INIT_LIST_HEAD(&head);
+
+    while (!list_empty(l) && !list_empty(r)) {
+        struct list_head *selected, *l_first = l->next, *r_first = r->next;
+        element_t *left_e = list_first_entry(l, element_t, list);
+        element_t *right_e = list_first_entry(r, element_t, list);
+
+        int cmp_result = strcmp(left_e->value, right_e->value);
+
+        selected = descend ? ((cmp_result < 0) ? r_first : l_first)
+                           : ((cmp_result > 0) ? r_first : l_first);
+
+        list_move_tail(selected, &head);
+    }
+
+    list_splice_tail_init(list_empty(l) ? r : l, &head);
+    list_splice_tail(&head, l);
+}
+
 
 /* Sort elements of queue in ascending/descending order */
-void q_sort(struct list_head *head, bool descend) {}
+void q_sort(struct list_head *head, bool descend)
+{
+    if (!head || list_empty(head) || list_is_singular(head))
+        return;
+
+    /* left and right sub queue*/
+    struct list_head l, r;
+    struct list_head *mid;
+
+    INIT_LIST_HEAD(&l);
+    INIT_LIST_HEAD(&r);
+
+    mid = find_mid_node(head);
+
+    /* After cut
+     * l will point to the left part of the queue relative to the mid position.
+     * (include mid) head will point to the right part of the queue relative to
+     * the mid position */
+    list_cut_position(&l, head, mid);
+
+    q_sort(&l, descend);
+    q_sort(head, descend);
+    merge_two_queues(&l, head, descend);
+    list_splice_tail(&l, head);
+}
 
 /* Remove every node which has a node with a strictly less value anywhere to
  * the right side of it */
 int q_ascend(struct list_head *head)
 {
     // https://leetcode.com/problems/remove-nodes-from-linked-list/
-    return 0;
+    if (!head || list_empty(head))
+        return 0;
+
+    int amount = 1;
+
+    struct list_head *min = head->prev, *node = head->prev->prev, *next;
+
+
+    for (next = node->prev; node != (head); node = next, next = node->prev) {
+        element_t *element = list_entry(node, element_t, list);
+        element_t *cur_min_element = list_entry(min, element_t, list);
+
+        if (strcmp(cur_min_element->value, element->value) < 0) {
+            list_del(&element->list);
+            q_release_element(element);
+        } else {
+            min = node;
+            ++amount;
+        }
+    }
+    return amount;
 }
 
 /* Remove every node which has a node with a strictly greater value anywhere to
@@ -281,8 +357,7 @@ int q_descend(struct list_head *head)
         if (strcmp(cur_max_element->value, element->value) > 0) {
             list_del(&element->list);
 
-            /* 看函式說明為 "remove" node
-             * 但實際上要 "delete" node 才有辦法通過 trace-06-ops 的測資*/
+            /* should "delete" the element, otherwise cant pass trace-06-ops */
             q_release_element(element);
         } else {
             max = node;
@@ -297,5 +372,19 @@ int q_descend(struct list_head *head)
 int q_merge(struct list_head *head, bool descend)
 {
     // https://leetcode.com/problems/merge-k-sorted-lists/
-    return 0;
+
+    if (!head || list_empty(head))
+        return 0;
+
+    queue_contex_t *target = list_entry(head->next, queue_contex_t, chain);
+    queue_contex_t *other = NULL;
+
+    list_for_each_entry (other, head, chain) {
+        if (target == other)
+            continue;
+        merge_two_queues(target->q, other->q, descend);
+        other->size = 0;
+    }
+
+    return q_size(target->q);
 }
