@@ -258,8 +258,8 @@ void q_reverseK(struct list_head *head, int k)
     list_splice(&rk_head, head);
 }
 
-/* Merge tow queues and set final queue head to l*/
-void merge_two_queues(struct list_head *l, struct list_head *r, bool descend)
+/* Merge tow sorted queues and set l to the queue head*/
+void merge_sorted_queues(struct list_head *l, struct list_head *r, bool descend)
 {
     struct list_head head;
     INIT_LIST_HEAD(&head);
@@ -305,7 +305,7 @@ void q_sort(struct list_head *head, bool descend)
 
     q_sort(&l, descend);
     q_sort(head, descend);
-    merge_two_queues(&l, head, descend);
+    merge_sorted_queues(&l, head, descend);
     list_splice_tail(&l, head);
 }
 
@@ -382,7 +382,7 @@ int q_merge(struct list_head *head, bool descend)
     list_for_each_entry (other, head, chain) {
         if (target == other)
             continue;
-        merge_two_queues(target->q, other->q, descend);
+        merge_sorted_queues(target->q, other->q, descend);
         other->size = 0;
     }
 
