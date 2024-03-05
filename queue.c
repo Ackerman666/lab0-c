@@ -299,8 +299,7 @@ void q_sort(struct list_head *head, bool descend)
 
     /* After cut
      * l will point to the left part of the queue relative to the mid position.
-     * (include mid) head will point to the right part of the queue relative to
-     * the mid position */
+     * otherwise head will point to the right part (excluding mid) */
     list_cut_position(&l, head, mid);
 
     q_sort(&l, descend);
