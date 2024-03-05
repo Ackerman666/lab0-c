@@ -289,11 +289,10 @@ void q_sort(struct list_head *head, bool descend)
         return;
 
     /* left and right sub queue*/
-    struct list_head l, r;
+    struct list_head l;
     struct list_head *mid;
 
     INIT_LIST_HEAD(&l);
-    INIT_LIST_HEAD(&r);
 
     mid = find_mid_node(head);
 
