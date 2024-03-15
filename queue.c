@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "queue.h"
 
@@ -385,4 +386,35 @@ int q_merge(struct list_head *head, bool descend)
     }
 
     return q_size(target->q);
+}
+
+
+/* Shuffle the elements in the queues.
+ * Which is implemented by the Fisher–Yates shuffle algorithm.*/
+void q_shuffle(struct list_head *head)
+{
+    if (!head || list_empty(head))
+        return;
+
+    struct list_head *tail = head->prev;
+
+    for (int i = q_size(head); i > 1; i--) {
+        int random_index = rand() % i;
+        struct list_head *cur = head;
+
+        // Find the element to be swapped
+        for (int j = 0; j <= random_index; j++)
+            cur = cur->next;
+
+
+        element_t *tail_element = list_entry(tail, element_t, list);
+        element_t *cur_element = list_entry(cur, element_t, list);
+
+        // do change value
+        char *tmp = tail_element->value;
+        tail_element->value = cur_element->value;
+        cur_element->value = tmp;
+
+        tail = tail->prev;
+    }
 }
