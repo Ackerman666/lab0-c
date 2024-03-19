@@ -19,8 +19,10 @@
 #include <time.h>
 #endif
 
+#include "custom_cmp.h"
 #include "dudect/fixture.h"
 #include "list.h"
+#include "list_sort.h"
 #include "random.h"
 
 /* Shannon entropy */
@@ -582,9 +584,17 @@ static bool do_size(int argc, char *argv[])
 
 bool do_sort(int argc, char *argv[])
 {
-    if (argc != 1) {
-        report(1, "%s takes no arguments", argv[0]);
+    if (argc != 1 && argc != 2) {
+        report(1, "%s takes 0-1 arguments", argv[0]);
         return false;
+    }
+
+    int t = 0;
+    if (argc == 2) {
+        if (!get_int(argv[1], &t)) {
+            report(1, "Invalid number of t");
+            return false;
+        }
     }
 
     int cnt = 0;
@@ -598,9 +608,13 @@ bool do_sort(int argc, char *argv[])
         report(3, "Warning: Calling sort on single node");
     error_check();
 
+
+
     set_noallocate_mode(true);
     if (current && exception_setup(true))
-        q_sort(current->q, descend);
+        t ? (descend ? list_sort(NULL, current->q, q_desc_cmp)
+                     : list_sort(NULL, current->q, q_asc_cmp))
+          : q_sort(current->q, descend);
     exception_cancel();
     set_noallocate_mode(false);
 
@@ -1057,7 +1071,10 @@ static void console_init()
         "Remove from tail of queue. Optionally compare to expected value str",
         "[str]");
     ADD_COMMAND(reverse, "Reverse queue", "");
-    ADD_COMMAND(sort, "Sort queue in ascending/descening order", "");
+    ADD_COMMAND(sort,
+                "Sort queue in ascending/descening order (sort type : [0] "
+                "merge_sort, [1] list_sort)",
+                "[t]");
     ADD_COMMAND(size, "Compute queue size n times (default: n == 1)", "[n]");
     ADD_COMMAND(show, "Show queue contents", "");
     ADD_COMMAND(dm, "Delete middle node in queue", "");
